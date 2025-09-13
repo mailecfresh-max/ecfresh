@@ -153,7 +153,7 @@ const Header: React.FC = () => {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block py-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
-                {user.isAdmin ? 'Dashboard' : 'My Account'}
+                {user.isAdmin ? 'Admin Dashboard' : 'My Account'}
               </Link>
             )}
             {!user && (
