@@ -82,6 +82,10 @@ const CheckoutPage: React.FC = () => {
       toast.error('Phone number is required');
       return;
     }
+    if (!guestDetails.email.trim()) {
+      toast.error('Email is required');
+      return;
+    }
     if (!guestDetails.address.trim()) {
       toast.error('Address is required');
       return;
@@ -98,106 +102,103 @@ const CheckoutPage: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Create order object
-      const newOrder = {
-        id: `ORD-${Date.now()}`,
-        userId: user?.id || `guest-${Date.now()}`,
-        items: items,
-        total: total,
-        deliveryFee: deliveryFee,
-        loyaltyUsed: loyaltyDiscount,
-        deliveryDate: selectedDate,
-        timeSlot: selectedTimeSlot,
-        address: {
-          id: `addr-${Date.now()}`,
-          name: guestDetails.name,
-          phone: guestDetails.phone,
-          address: guestDetails.address,
-          pinCode: guestDetails.pinCode,
-          landmark: guestDetails.landmark,
-          optionalPhone: guestDetails.optionalPhone,
-          isDefault: true
-        },
-        status: 'confirmed' as const,
-        createdAt: new Date().toISOString()
-      };
-
-      // Save order to localStorage
-      const existingOrders = getFromLocalStorage(LOCAL_STORAGE_KEYS.ORDERS, []);
-      const updatedOrders = [newOrder, ...existingOrders];
-      localStorage.setItem(LOCAL_STORAGE_KEYS.ORDERS, JSON.stringify(updatedOrders));
-
-      // If guest, create account using guest details before awarding loyalty
-      let accountUser = user;
-      if (!accountUser) {
-        const newUserData: any = {
-          id: `user-${Date.now()}`,
-          email: guestDetails.email || `${guestDetails.phone}@guest.local`,
-          name: guestDetails.name,
-          phone: guestDetails.phone,
-          pinCode: guestDetails.pinCode,
-          loyaltyPoints: 0,
-          totalPurchases: 0,
-          addresses: [{
-            id: `addr-${Date.now()}`,
+      // Create or get user account
+      let orderUser = user;
+      if (!orderUser) {
+        // Create user account seamlessly
+        try {
+          orderUser = await createUserIfNotExists(guestDetails.email, {
             name: guestDetails.name,
             phone: guestDetails.phone,
-            address: guestDetails.address,
-            pinCode: guestDetails.pinCode,
-            landmark: guestDetails.landmark,
-            optionalPhone: guestDetails.optionalPhone,
-            isDefault: true
-          }]
-        };
-        updateUser(newUserData);
-        accountUser = newUserData;
-      } else {
-        // Update existing user's profile with checkout details
-        const updatedAddresses = [{
-          id: user.addresses?.[0]?.id || `addr-${Date.now()}`,
+            pinCode: guestDetails.pinCode
+          });
+          
+          // Send magic link for future logins
+          await signInWithEmail(guestDetails.email);
+          toast.success('Account created! Check your email for a magic link to sign in next time.');
+        } catch (error) {
+          console.error('Error creating user:', error);
+          toast.error('Failed to create account. Please try again.');
+          return;
+        }
+      }
+
+      // Create order object
+      const orderData = {
+        user_id: orderUser.id,
+        items: items,
+        total,
+        delivery_fee: deliveryFee,
+        loyalty_used: loyaltyDiscount,
+        delivery_date: selectedDate,
+        time_slot: selectedTimeSlot,
+        address: {
           name: guestDetails.name,
           phone: guestDetails.phone,
           address: guestDetails.address,
           pinCode: guestDetails.pinCode,
           landmark: guestDetails.landmark,
           optionalPhone: guestDetails.optionalPhone,
-          isDefault: true
-        }];
-        
-        const updatedUserData = {
+        },
+        status: 'confirmed'
+      };
+
+      // Save order to Supabase
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
+
+      if (orderError) {
+        throw orderError;
+      }
+
+      // Update user loyalty points and total purchases
+      let loyaltyEarned = 0;
+      if (orderUser.totalPurchases === 0 && subtotal >= 300) {
+        loyaltyEarned = 100; // First order bonus
+      } else {
+        loyaltyEarned = Math.floor(subtotal * 0.1); // 10% cashback
+      }
+      
+      const newLoyaltyPoints = orderUser.loyaltyPoints + loyaltyEarned - loyaltyDiscount;
+      const newTotalPurchases = orderUser.totalPurchases + subtotal;
+
+      // Update user in Supabase
+      await supabase
+        .from('users')
+        .update({
+          loyalty_points: newLoyaltyPoints,
+          total_purchases: newTotalPurchases,
           name: guestDetails.name,
           phone: guestDetails.phone,
-          email: guestDetails.email || user.email,
-          pinCode: guestDetails.pinCode,
-          addresses: updatedAddresses
-        };
-        updateUser(updatedUserData);
-        accountUser = { ...user, ...updatedUserData };
-      }
+          pin_code: guestDetails.pinCode
+        })
+        .eq('id', orderUser.id);
 
-      // Update loyalty for the accountUser
-      if (accountUser) {
-        let loyaltyEarned = 0;
-        if (accountUser.totalPurchases === 0 && subtotal >= 300) {
-          loyaltyEarned = 100;
-        } else {
-          loyaltyEarned = Math.floor(subtotal * 0.1);
-        }
-        const newLoyaltyPoints = (accountUser.loyaltyPoints || 0) + loyaltyEarned - loyaltyDiscount;
-        const newTotalPurchases = (accountUser.totalPurchases || 0) + subtotal;
-
-        updateUser({
-          ...accountUser,
-          loyaltyPoints: newLoyaltyPoints,
-          totalPurchases: newTotalPurchases
+      // Save/update address
+      await supabase
+        .from('addresses')
+        .upsert({
+          user_id: orderUser.id,
+          name: guestDetails.name,
+          phone: guestDetails.phone,
+          address: guestDetails.address,
+          pin_code: guestDetails.pinCode,
+          landmark: guestDetails.landmark,
+          optional_phone: guestDetails.optionalPhone,
+          is_default: true
         });
 
-        // Save last selected time slot
-        localStorage.setItem(LOCAL_STORAGE_KEYS.LAST_TIME_SLOT, selectedTimeSlot);
-      }
+      // Update local user state
+      updateUser({
+        loyaltyPoints: newLoyaltyPoints,
+        totalPurchases: newTotalPurchases,
+        name: guestDetails.name,
+        phone: guestDetails.phone,
+        pinCode: guestDetails.pinCode
+      });
 
       clearCart();
       toast.success('Order placed successfully!');
@@ -286,15 +287,16 @@ const CheckoutPage: React.FC = () => {
           <div className="mt-4">
             <input
               type="email"
-              placeholder="Email (Optional)"
+              placeholder="Email *"
               value={guestDetails.email || ''}
               onChange={e => setGuestDetails({ ...guestDetails, email: e.target.value })}
               className="w-full border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
             />
           </div>
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
             <p className="text-sm text-green-700">
-              <strong>Note:</strong> {user ? 'Any changes will be saved to your profile.' : 'Your details will be saved for future orders to make checkout faster.'}
+              <strong>Note:</strong> {user ? 'Any changes will be saved to your profile.' : 'We\'ll create an account for you and send a magic link to your email for easy future logins.'}
             </p>
           </div>
         </div>

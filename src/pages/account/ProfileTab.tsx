@@ -63,7 +63,7 @@ const ProfileTab: React.FC = () => {
   };
 
   const handleSignOut = () => {
-    logout();
+    signOut();
     navigate('/');
     toast.success('Signed out successfully');
   };

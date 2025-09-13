@@ -7,46 +7,72 @@ import toast from 'react-hot-toast';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [isEmailSent, setIsEmailSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login, user } = useAuth();
+  const { signInWithEmail, user } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
   if (user) {
-    return <Navigate to={user.isAdmin ? '/admin' : '/'} replace />;
+    return <Navigate to={user.isAdmin ? '/dashboard' : '/'} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
+    if (!email) {
+      toast.error('Please enter your email');
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
+      const success = await signInWithEmail(email);
       if (success) {
-        toast.success('Login successful!');
-        // Check if admin and redirect accordingly
-        if (email === 'mail.ecfresh@gmail.com') {
-          navigate('/admin');
-        } else {
-          navigate('/');
-        }
+        setIsEmailSent(true);
+        toast.success('Magic link sent! Check your email to sign in.');
       } else {
-        toast.error('Invalid credentials');
+        toast.error('Failed to send magic link. Please try again.');
       }
     } catch (error) {
-      toast.error('Login failed. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (isEmailSent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-orange-50 flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full text-center"
+        >
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Mail className="w-8 h-8 text-green-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h1>
+            <p className="text-gray-600 mb-6">
+              We've sent a magic link to <strong>{email}</strong>. 
+              Click the link in your email to sign in.
+            </p>
+            <button
+              onClick={() => {
+                setIsEmailSent(false);
+                setEmail('');
+              }}
+              className="text-green-600 hover:text-green-700 font-medium"
+            >
+              Try a different email
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-orange-50 flex items-center justify-center px-4">
       <motion.div
@@ -64,7 +90,7 @@ const LoginPage: React.FC = () => {
             />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h1>
-          <p className="text-gray-600">Sign in to your account</p>
+          <p className="text-gray-600">Enter your email to get a magic link</p>
         </div>
 
         {/* Form */}
@@ -88,23 +114,6 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Enter your password"
-                  required
-                />
-              </div>
-            </div>
 
             <button
               type="submit"
@@ -115,22 +124,16 @@ const LoginPage: React.FC = () => {
                 <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>Send Magic Link</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Credentials:</h3>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p><strong>Admin:</strong> mail.ecfresh@gmail.com / Signin@66</p>
-              <p><strong>User:</strong> Any email/password combination</p>
-            </div>
+          <div className="mt-6 text-center text-sm text-gray-600">
+            <p>We'll send you a secure link to sign in without a password</p>
           </div>
-
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}

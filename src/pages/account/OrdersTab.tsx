@@ -1,20 +1,81 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { LOCAL_STORAGE_KEYS, getFromLocalStorage, setToLocalStorage } from '../../utils/localStorage';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import { Order } from '../../types';
 import { Package, Clock, MapPin, Phone } from 'lucide-react';
 import { formatTimeSlot } from '../../utils/timeSlots';
 
 const OrdersTab: React.FC = () => {
-  const [orders, setOrders] = React.useState<Order[]>(() => getFromLocalStorage<Order[]>(LOCAL_STORAGE_KEYS.ORDERS, []));
+  const { user } = useAuth();
+  const [orders, setOrders] = React.useState<Order[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const cancelOrder = (id: string) => {
-    setOrders(prev => {
-      const next = prev.map(o => o.id === id && o.status !== 'delivered' && o.status !== 'cancelled' ? { ...o, status: 'cancelled' } : o);
-      setToLocalStorage(LOCAL_STORAGE_KEYS.ORDERS, next);
-      return next;
-    });
+  React.useEffect(() => {
+    if (user) {
+      loadOrders();
+    }
+  }, [user]);
+
+  const loadOrders = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      const transformedOrders: Order[] = data.map(order => ({
+        id: order.id,
+        userId: order.user_id,
+        items: order.items,
+        total: order.total,
+        deliveryFee: order.delivery_fee,
+        loyaltyUsed: order.loyalty_used,
+        deliveryDate: order.delivery_date,
+        timeSlot: order.time_slot,
+        address: order.address,
+        status: order.status,
+        createdAt: order.created_at
+      }));
+      
+      setOrders(transformedOrders);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const cancelOrder = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setOrders(prev => prev.map(o => 
+        o.id === id ? { ...o, status: 'cancelled' as const } : o
+      ));
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+        <div className="animate-spin w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading your orders...</p>
+      </div>
+    );
+  }
 
   if (orders.length === 0) {
     return (
@@ -149,5 +210,3 @@ const OrdersTab: React.FC = () => {
 };
 
 export default OrdersTab;
-
-

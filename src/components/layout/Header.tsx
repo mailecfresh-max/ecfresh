@@ -101,10 +101,10 @@ const Header: React.FC = () => {
               <div className="hidden md:flex items-center space-x-2">
                 {user ? (
                   <Link
-                    to={user.isAdmin ? "/admin" : "/account"}
+                    to={user.isAdmin ? "/dashboard" : "/account"}
                     className="text-sm font-medium text-gray-900 hover:text-green-600 transition-colors"
                   >
-                    {user.isAdmin ? 'Admin' : (user.name || 'Account')}
+                    {user.isAdmin ? 'Dashboard' : (user.name || 'Account')}
                   </Link>
                 ) : (
                   <Link
@@ -149,11 +149,11 @@ const Header: React.FC = () => {
             </Link>
             {user && (
               <Link
-                to={user.isAdmin ? "/admin" : "/account"}
+                to={user.isAdmin ? "/dashboard" : "/account"}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="block py-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
-                {user.isAdmin ? 'Admin Dashboard' : 'My Account'}
+                {user.isAdmin ? 'Dashboard' : 'My Account'}
               </Link>
             )}
             {!user && (

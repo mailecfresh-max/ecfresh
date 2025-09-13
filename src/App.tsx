@@ -40,7 +40,6 @@ function App() {
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/dashboard" element={<AdminDashboard />} />
-                  <Route path="/admin/*" element={<AdminDashboard />} />
                   <Route
                     path="/*"
                     element={
