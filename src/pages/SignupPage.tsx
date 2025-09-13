@@ -19,7 +19,7 @@ const SignupPage: React.FC = () => {
 
   // Redirect if already logged in
   if (user) {
-    return <Navigate to={user.isAdmin ? '/dashboard' : '/'} replace />;
+    return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,11 +50,13 @@ const SignupPage: React.FC = () => {
     try {
       const success = await signUp(email, password, { name, phone });
       if (success) {
-        toast.success('Account created successfully! Please check your email to verify your account.');
-        navigate('/login');
+        toast.success('Account created successfully!');
+        // Don't navigate immediately, let the auth state change handle it
       }
     } catch (error) {
-      toast.error('Something went wrong. Please try again.');
+      console.error('Signup error:', error);
+      toast.error('Failed to create account. Please try again.');
+    } catch (error) {
     } finally {
       setIsLoading(false);
     }

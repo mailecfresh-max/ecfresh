@@ -224,10 +224,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return userProfile;
       }
 
-      // Create new user
+      // Get the current authenticated user ID
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        throw new Error('No authenticated user found');
+      }
+
+      // Create new user with the authenticated user's ID
       const { data: newUser, error } = await supabase
         .from('users')
         .insert({
+          id: authUser.id,
           email,
           name: userData?.name || email.split('@')[0],
           phone: userData?.phone || '',
