@@ -1,10 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './hooks/useAuth';
 import { CartProvider } from './hooks/useCart';
 import { WishlistProvider } from './hooks/useWishlist';
 import { AdminDataProvider } from './hooks/useAdminData';
+import { supabase } from './lib/supabase';
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 import HomePage from './pages/HomePage';
@@ -18,6 +20,23 @@ import AccountLayout from './pages/account/AccountLayout';
 import WishlistPage from './pages/WishlistPage';
 
 function App() {
+  useEffect(() => {
+    // Handle auth callback from magic link
+    const handleAuthCallback = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (data?.session) {
+        // User is authenticated, redirect to home or intended page
+        window.location.hash = '';
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+
+    // Check if this is an auth callback
+    if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
+      handleAuthCallback();
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <AdminDataProvider>
