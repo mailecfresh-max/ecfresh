@@ -1,0 +1,29 @@
+{
+  "name": "ECFresh - Fresh Produce Delivery",
+  "short_name": "ECFresh",
+  "description": "Fresh vegetables, cut fruits and ready-to-cook produce delivered to your doorstep in Kochi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1FA65A",
+  "icons": [
+    {
+      "src": "/WhatsApp_Image_2025-07-24_at_7.15.05_AM-removebg-preview.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/WhatsApp_Image_2025-07-24_at_7.15.05_AM-removebg-preview.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["food", "shopping", "lifestyle"],
+  "screenshots": [
+    {
+      "src": "/screenshot1.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg"
+    }
+  ]
+}

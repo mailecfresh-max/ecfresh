@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Product image container for ProductDetailPage */
+.product-image-container {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 6px; /* smaller top/bottom */
+  padding-inline: 8px; /* side padding */
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.product-image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Mobile: tighter padding and no shadow */
+@media (max-width: 640px) {
+  .product-image-container {
+    padding-block: 2px; /* minimal top/bottom */
+    padding-inline: 6px; /* slight side padding */
+    border-radius: 8px;
+    box-shadow: none;
+  }
+}
