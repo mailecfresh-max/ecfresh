@@ -1,9 +1,8 @@
 const CACHE_NAME = 'ecfresh-v1';
 const urlsToCache = [
-  '/',
-  '/static/css/main.css',
-  '/static/js/main.js',
-  '/manifest.json'
+  './',
+  './assets/',
+  './manifest.json'
 ];
 
 // Install service worker
@@ -11,7 +10,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        return cache.addAll(urlsToCache);
+        return cache.addAll(urlsToCache).catch(err => {
+          console.log('Cache addAll failed:', err);
+        });
       })
   );
 });
