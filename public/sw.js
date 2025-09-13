@@ -1,8 +1,8 @@
 const CACHE_NAME = 'ecfresh-v1';
 const urlsToCache = [
-  './',
-  './assets/',
-  './manifest.json'
+  '/',
+  '/manifest.json',
+  '/WhatsApp_Image_2025-07-24_at_7.15.05_AM-removebg-preview.png'
 ];
 
 // Install service worker
@@ -19,13 +19,24 @@ self.addEventListener('install', (event) => {
 
 // Fetch event
 self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+  
+  // Skip chrome-extension and other non-http requests
+  if (!event.request.url.startsWith('http')) return;
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
         // Return cached version or fetch from network
         return response || fetch(event.request);
-      }
-    )
+      })
+      .catch(() => {
+        // If both cache and network fail, return offline page for navigation requests
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+      })
   );
 });
 
