@@ -144,6 +144,10 @@ const CheckoutPage: React.FC = () => {
       };
 
       // Save order to Supabase
+      if (!supabase) {
+        throw new Error('Database service not available');
+      }
+
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert(orderData)

@@ -31,10 +31,13 @@ export const AdminDataProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize data
   useEffect(() => {
+    if (!supabase) return;
     loadData();
   }, []);
 
   const loadData = async () => {
+    if (!supabase) return;
+
     try {
       // Load banners
       const { data: bannersData } = await supabase

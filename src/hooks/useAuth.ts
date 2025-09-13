@@ -21,6 +21,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setIsLoading(false);
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -44,6 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
+    if (!supabase) return;
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -79,6 +86,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithEmail = async (email: string): Promise<boolean> => {
+    if (!supabase) {
+      toast.error('Authentication service not available');
+      return false;
+    }
+
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -96,6 +108,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    if (!supabase) return;
+
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -106,6 +120,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const createUserIfNotExists = async (email: string, userData?: Partial<User>): Promise<User> => {
+    if (!supabase) {
+      throw new Error('Database service not available');
+    }
+
     try {
       // First check if user exists
       const { data: existingUser } = await supabase
@@ -167,6 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateUser = (userData: Partial<User>) => {
     if (!user) return;
+    if (!supabase) return;
 
     const updatedUser = { ...user, ...userData };
     setUser(updatedUser);
