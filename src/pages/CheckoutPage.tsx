@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 import { getAvailableTimeSlots, formatTimeSlot, TimeSlot } from '../utils/timeSlots';
 import { LOCAL_STORAGE_KEYS, getFromLocalStorage } from '../utils/localStorage';
 import toast from 'react-hot-toast';
@@ -21,7 +22,7 @@ const CheckoutPage: React.FC = () => {
     email: ''
   });
   const { items, getTotalAmount, clearCart } = useCart();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, createUserIfNotExists, signInWithEmail } = useAuth();
   const navigate = useNavigate();
 
   const [selectedDate, setSelectedDate] = useState('');

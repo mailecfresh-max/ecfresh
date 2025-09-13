@@ -95,7 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: 'https://mailecfresh-max-ecfr-v19f.bolt.host/'
+          emailRedirectTo: window.location.origin
         }
       });
 

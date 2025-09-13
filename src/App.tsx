@@ -18,21 +18,38 @@ import AdminDashboard from './pages/AdminDashboard';
 import ProductDetailPage from './pages/ProductDetailPage';
 import AccountLayout from './pages/account/AccountLayout';
 import WishlistPage from './pages/WishlistPage';
+import AuthDebug from './components/common/AuthDebug';
 
 function App() {
   useEffect(() => {
     // Handle auth callback from magic link
     const handleAuthCallback = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (data?.session) {
-        // User is authenticated, redirect to home or intended page
-        window.location.hash = '';
-        window.history.replaceState({}, document.title, window.location.pathname);
+      if (!supabase) return;
+      
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Auth callback error:', error);
+          return;
+        }
+        
+        if (data?.session) {
+          console.log('User authenticated:', data.session.user.email);
+          // Clear URL fragments
+          if (window.location.hash) {
+            window.location.hash = '';
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        }
+      } catch (error) {
+        console.error('Auth callback failed:', error);
       }
     };
 
     // Check if this is an auth callback
-    if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
+    if (window.location.hash.includes('access_token') || 
+        window.location.hash.includes('error') || 
+        window.location.hash.includes('type=recovery')) {
       handleAuthCallback();
     }
   }, []);
@@ -55,6 +72,8 @@ function App() {
                     },
                   }}
                 />
+                
+                <AuthDebug />
                 
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />

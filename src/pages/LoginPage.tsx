@@ -59,6 +59,11 @@ const LoginPage: React.FC = () => {
               We've sent a magic link to <strong>{email}</strong>. 
               Click the link in your email to sign in.
             </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-700">
+                <strong>Admin Access:</strong> Use admin@ecfresh.com to access the admin dashboard.
+              </p>
+            </div>
             <button
               onClick={() => {
                 setIsEmailSent(false);
