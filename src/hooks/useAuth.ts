@@ -214,6 +214,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       // First check if user exists
+      // Get the current authenticated user ID first
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        throw new Error('No authenticated user found');
+      }
+
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
         .select('*')
@@ -258,12 +264,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           };
           return userProfile;
         }
-      }
-
-      // Get the current authenticated user ID
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        throw new Error('No authenticated user found');
       }
 
       // Create new user with the authenticated user's ID
