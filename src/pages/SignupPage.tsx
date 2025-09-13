@@ -56,7 +56,6 @@ const SignupPage: React.FC = () => {
     } catch (error) {
       console.error('Signup error:', error);
       toast.error('Failed to create account. Please try again.');
-    } catch (error) {
     } finally {
       setIsLoading(false);
     }
