@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session?.user?.email);
       if (session?.user) {
         await fetchUserProfile(session.user);
       } else {
@@ -53,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = async (authUser: SupabaseUser) => {
     if (!supabase) return;
 
-    setIsLoading(true);
+    console.log('Fetching user profile for:', authUser.email);
     try {
       const { data, error } = await supabase
         .from('users')
@@ -73,6 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             phone: authUser.user_metadata?.phone || ''
           });
           setUser(newUser);
+          setIsLoading(false);
           return;
         }
         throw error;
@@ -94,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
+      toast.error('Failed to load user profile');
     } finally {
       setIsLoading(false);
     }
@@ -135,11 +138,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
       
-      if (data.user) {
-        await fetchUserProfile(data.user);
-        return true;
-      }
-      return false;
+      // Don't manually fetch profile here - let the auth state change handler do it
+      return !!data.user;
     } catch (error) {
       console.error('Error signing in with password:', error);
       const authError = error as AuthError;

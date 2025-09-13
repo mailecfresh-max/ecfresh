@@ -48,10 +48,12 @@ const LoginPage: React.FC = () => {
         const success = await signInWithPassword(email, password);
         if (success) {
           toast.success('Signed in successfully!');
-          navigate(user?.isAdmin ? '/dashboard' : '/');
+          // Don't navigate immediately - let the auth state change handle it
+          // Error is already handled in signInWithPassword
         }
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast.error('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
