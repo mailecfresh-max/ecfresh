@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowRight, Leaf } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import toast from 'react-hot-toast';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginMode, setLoginMode] = useState<'magic' | 'password'>('password');
+  const [showPassword, setShowPassword] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { signInWithEmail, user } = useAuth();
+  const { signInWithEmail, signInWithPassword, user } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -25,15 +28,28 @@ const LoginPage: React.FC = () => {
       return;
     }
 
+    if (loginMode === 'password' && !password) {
+      toast.error('Please enter your password');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const success = await signInWithEmail(email);
-      if (success) {
-        setIsEmailSent(true);
-        toast.success('Magic link sent! Check your email to sign in.');
+      if (loginMode === 'magic') {
+        const success = await signInWithEmail(email);
+        if (success) {
+          setIsEmailSent(true);
+          toast.success('Magic link sent! Check your email to sign in.');
+        } else {
+          toast.error('Failed to send magic link. Please try again.');
+        }
       } else {
-        toast.error('Failed to send magic link. Please try again.');
+        const success = await signInWithPassword(email, password);
+        if (success) {
+          toast.success('Signed in successfully!');
+          navigate(user?.isAdmin ? '/dashboard' : '/');
+        }
       }
     } catch (error) {
       toast.error('Something went wrong. Please try again.');
@@ -100,6 +116,32 @@ const LoginPage: React.FC = () => {
 
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          {/* Login Mode Toggle */}
+          <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
+            <button
+              type="button"
+              onClick={() => setLoginMode('password')}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                loginMode === 'password'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Password
+            </button>
+            <button
+              type="button"
+              onClick={() => setLoginMode('magic')}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                loginMode === 'magic'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Magic Link
+            </button>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -119,6 +161,32 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
+            {loginMode === 'password' && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-12 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Enter your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -129,7 +197,7 @@ const LoginPage: React.FC = () => {
                 <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
               ) : (
                 <>
-                  <span>Send Magic Link</span>
+                  <span>{loginMode === 'magic' ? 'Send Magic Link' : 'Sign In'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -137,12 +205,18 @@ const LoginPage: React.FC = () => {
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-600">
-            <p>We'll send you a secure link to sign in without a password</p>
+            <p>
+              {loginMode === 'magic' 
+                ? "We'll send you a secure link to sign in without a password"
+                : "Enter your email and password to sign in"
+              }
+            </p>
           </div>
+          
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/register" className="text-green-600 hover:text-green-700 font-medium">
+              <Link to="/signup" className="text-green-600 hover:text-green-700 font-medium">
                 Sign up
               </Link>
             </p>

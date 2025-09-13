@@ -14,6 +14,8 @@ import ShopPage from './pages/ShopPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import AdminDashboard from './pages/AdminDashboard';
 import ProductDetailPage from './pages/ProductDetailPage';
 import AccountLayout from './pages/account/AccountLayout';
@@ -77,6 +79,8 @@ function App() {
                 
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/auth/callback" element={<AuthCallbackPage />} />
                   <Route path="/dashboard" element={<AdminDashboard />} />
                   <Route
                     path="/*"

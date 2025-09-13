@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 import toast from 'react-hot-toast';
@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 interface AuthContextType {
   user: User | null;
   signInWithEmail: (email: string) => Promise<boolean>;
+  signInWithPassword: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string, userData?: { name?: string; phone?: string }) => Promise<boolean>;
   signOut: () => Promise<void>;
   createUserIfNotExists: (email: string, userData?: Partial<User>) => Promise<User>;
   updateUser: (userData: Partial<User>) => void;
@@ -95,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: window.location.origin
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
       });
 
@@ -107,6 +109,78 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInWithPassword = async (email: string, password: string): Promise<boolean> => {
+    if (!supabase) {
+      toast.error('Authentication service not available');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+      
+      if (data.user) {
+        await fetchUserProfile(data.user.id);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error signing in with password:', error);
+      const authError = error as AuthError;
+      if (authError.message.includes('Invalid login credentials')) {
+        toast.error('Invalid email or password');
+      } else {
+        toast.error('Failed to sign in. Please try again.');
+      }
+      return false;
+    }
+  };
+
+  const signUp = async (email: string, password: string, userData?: { name?: string; phone?: string }): Promise<boolean> => {
+    if (!supabase) {
+      toast.error('Authentication service not available');
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            name: userData?.name || email.split('@')[0],
+            phone: userData?.phone || ''
+          }
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data.user) {
+        // Create user profile immediately
+        await createUserIfNotExists(email, {
+          name: userData?.name || email.split('@')[0],
+          phone: userData?.phone || ''
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error signing up:', error);
+      const authError = error as AuthError;
+      if (authError.message.includes('User already registered')) {
+        toast.error('An account with this email already exists');
+      } else {
+        toast.error('Failed to create account. Please try again.');
+      }
+      return false;
+    }
+  };
   const signOut = async () => {
     if (!supabase) return;
 
@@ -114,8 +188,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
+      toast.success('Signed out successfully');
     } catch (error) {
       console.error('Error signing out:', error);
+      toast.error('Error signing out');
     }
   };
 
@@ -241,7 +317,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { user, signInWithEmail, signOut, createUserIfNotExists, updateUser, isLoading } },
+    { value: { user, signInWithEmail, signInWithPassword, signUp, signOut, createUserIfNotExists, updateUser, isLoading } },
     children
   );
 };
