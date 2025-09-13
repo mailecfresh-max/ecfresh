@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user);
       } else {
         setIsLoading(false);
       }
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        await fetchUserProfile(session.user.id);
+        await fetchUserProfile(session.user);
       } else {
         setUser(null);
         setIsLoading(false);
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (authUser: SupabaseUser) => {
     if (!supabase) return;
 
     setIsLoading(true);
@@ -61,10 +61,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           *,
           addresses (*)
         `)
-        .eq('id', userId)
+        .eq('id', authUser.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // If user profile doesn't exist, create it
+        if (error.code === 'PGRST116') {
+          console.log('User profile not found, creating new profile...');
+          const newUser = await createUserIfNotExists(authUser.email || '', {
+            name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
+            phone: authUser.user_metadata?.phone || ''
+          });
+          setUser(newUser);
+          return;
+        }
+        throw error;
+      }
 
       if (data) {
         const userProfile: User = {
@@ -124,7 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       
       if (data.user) {
-        await fetchUserProfile(data.user.id);
+        await fetchUserProfile(data.user);
         return true;
       }
       return false;
@@ -202,13 +214,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       // First check if user exists
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: fetchError } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
+        .eq('id', authUser?.id)
         .single();
 
-      if (existingUser) {
+      if (existingUser && !fetchError) {
         // User exists, return existing user data
         const userProfile: User = {
           id: existingUser.id,
@@ -222,6 +234,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           isAdmin: existingUser.is_admin
         };
         return userProfile;
+      }
+
+      // Also check by email as fallback
+      if (!existingUser && fetchError?.code === 'PGRST116') {
+        const { data: existingUserByEmail } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .single();
+
+        if (existingUserByEmail) {
+          const userProfile: User = {
+            id: existingUserByEmail.id,
+            email: existingUserByEmail.email,
+            name: existingUserByEmail.name || '',
+            phone: existingUserByEmail.phone || '',
+            pinCode: existingUserByEmail.pin_code || '',
+            loyaltyPoints: existingUserByEmail.loyalty_points,
+            totalPurchases: existingUserByEmail.total_purchases,
+            addresses: [],
+            isAdmin: existingUserByEmail.is_admin
+          };
+          return userProfile;
+        }
       }
 
       // Get the current authenticated user ID
@@ -240,7 +276,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           phone: userData?.phone || '',
           pin_code: userData?.pinCode || '',
           loyalty_points: userData?.loyaltyPoints || 0,
-          total_purchases: userData?.totalPurchases || 0
+          total_purchases: userData?.totalPurchases || 0,
+          is_admin: false
         })
         .select()
         .single();
