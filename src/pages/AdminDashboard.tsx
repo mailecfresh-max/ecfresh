@@ -17,7 +17,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAdminData } from '../hooks/useAdminData';
 import { Banner, Category, Product, ProductVariant } from '../types';
 import ImageUpload from '../components/admin/ImageUpload';
@@ -50,11 +50,6 @@ const AdminDashboard: React.FC = () => {
     deleteProduct,
     refreshData
   } = useAdminData();
-
-  // Check if user is admin
-  if (!user?.isAdmin) {
-    return <Navigate to="/" replace />;
-  }
 
   // Refresh orders when tab changes to orders
   React.useEffect(() => {

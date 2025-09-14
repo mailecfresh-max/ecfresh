@@ -17,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminPasswordPage from './pages/AdminPasswordPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import AccountLayout from './pages/account/AccountLayout';
 import WishlistPage from './pages/WishlistPage';
@@ -82,6 +83,7 @@ function App() {
                   <Route path="/signup" element={<SignupPage />} />
                   <Route path="/auth/callback" element={<AuthCallbackPage />} />
                   <Route path="/dashboard" element={<AdminDashboard />} />
+                  <Route path="/admin" element={<AdminPasswordPage />} />
                   <Route
                     path="/*"
                     element={
