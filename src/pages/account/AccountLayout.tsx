@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { User, Package } from 'lucide-react';
+import { SignInButton } from '@clerk/nextjs';
 import { useAuth } from '../../hooks/useAuth';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import ProfileTab from './ProfileTab';
 import OrdersTab from './OrdersTab';
 
 type TabKey = 'profile' | 'orders';
 
 const AccountLayout: React.FC = () => {
-  const { user, logout, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const [active, setActive] = useState<TabKey>('profile');
 
-  const navigate = useNavigate();
-
   if (isLoading) return null;
+  
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -21,12 +21,11 @@ const AccountLayout: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Welcome to your account</h2>
           <p className="text-gray-600 mb-6">Please log in to view orders and profile settings.</p>
           <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={() => navigate('/login')}
-              className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-medium"
-            >
-              Log in
-            </button>
+            <SignInButton mode="modal">
+              <button className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-medium">
+                Log in
+              </button>
+            </SignInButton>
             <Link to="/shop" className="text-sm text-green-600 hover:underline">Continue shopping</Link>
           </div>
         </div>
@@ -72,5 +71,3 @@ const AccountLayout: React.FC = () => {
 };
 
 export default AccountLayout;
-
-

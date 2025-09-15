@@ -1,14 +1,11 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User as SupabaseUser, AuthError } from '@supabase/supabase-js';
+import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;
-  signInWithEmail: (email: string) => Promise<boolean>;
-  signInWithPassword: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string, userData?: { name?: string; phone?: string }) => Promise<boolean>;
   signOut: () => Promise<void>;
   createUserIfNotExists: (email: string, userData?: Partial<User>) => Promise<User>;
   updateUser: (userData: Partial<User>) => void;
@@ -17,44 +14,27 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const { user: clerkUser, isLoaded } = useUser();
+  const { signOut: clerkSignOut } = useClerkAuth();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabase) {
-      setIsLoading(false);
-      return;
-    }
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchUserProfile(session.user);
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session?.user?.email);
-      if (session?.user) {
-        await fetchUserProfile(session.user);
+    if (isLoaded) {
+      if (clerkUser) {
+        fetchUserProfile(clerkUser);
       } else {
         setUser(null);
         setIsLoading(false);
       }
-    });
+    }
+  }, [clerkUser, isLoaded]);
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserProfile = async (authUser: SupabaseUser) => {
+  const fetchUserProfile = async (clerkUser: any) => {
     if (!supabase) return;
 
-    console.log('Fetching user profile for:', authUser.email);
+    console.log('Fetching user profile for:', clerkUser.emailAddresses[0]?.emailAddress);
     try {
       const { data, error } = await supabase
         .from('users')
@@ -62,17 +42,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           *,
           addresses (*)
         `)
-        .eq('id', authUser.id)
+        .eq('id', clerkUser.id)
         .single();
 
       if (error) {
         // If user profile doesn't exist, create it
         if (error.code === 'PGRST116') {
           console.log('User profile not found, creating new profile...');
-          const newUser = await createUserIfNotExists(authUser.email || '', {
-            name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
-            phone: authUser.user_metadata?.phone || ''
-          });
+          const newUser = await createUserIfNotExists(
+            clerkUser.emailAddresses[0]?.emailAddress || '', 
+            {
+              name: clerkUser.fullName || clerkUser.firstName || '',
+              phone: clerkUser.phoneNumbers[0]?.phoneNumber || ''
+            }
+          );
           setUser(newUser);
           setIsLoading(false);
           return;
@@ -102,103 +85,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInWithEmail = async (email: string): Promise<boolean> => {
-    if (!supabase) {
-      toast.error('Authentication service not available');
-      return false;
-    }
-
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
-      });
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error sending magic link:', error);
-      return false;
-    }
-  };
-
-  const signInWithPassword = async (email: string, password: string): Promise<boolean> => {
-    if (!supabase) {
-      toast.error('Authentication service not available');
-      return false;
-    }
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) throw error;
-      
-      // Don't manually fetch profile here - let the auth state change handler do it
-      return !!data.user;
-    } catch (error) {
-      console.error('Error signing in with password:', error);
-      const authError = error as AuthError;
-      if (authError.message.includes('Invalid login credentials')) {
-        toast.error('Invalid email or password');
-      } else {
-        toast.error('Failed to sign in. Please try again.');
-      }
-      return false;
-    }
-  };
-
-  const signUp = async (email: string, password: string, userData?: { name?: string; phone?: string }): Promise<boolean> => {
-    if (!supabase) {
-      toast.error('Authentication service not available');
-      return false;
-    }
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            name: userData?.name || email.split('@')[0],
-            phone: userData?.phone || ''
-          }
-        }
-      });
-
-      if (error) throw error;
-      
-      if (data.user) {
-        // Create user profile immediately
-        await createUserIfNotExists(email, {
-          name: userData?.name || email.split('@')[0],
-          phone: userData?.phone || ''
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error signing up:', error);
-      const authError = error as AuthError;
-      if (authError.message.includes('User already registered')) {
-        toast.error('An account with this email already exists');
-      } else {
-        toast.error('Failed to create account. Please try again.');
-      }
-      return false;
-    }
-  };
   const signOut = async () => {
-    if (!supabase) return;
-
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await clerkSignOut();
       setUser(null);
       toast.success('Signed out successfully');
     } catch (error) {
@@ -214,16 +103,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       // First check if user exists
-      // Get the current authenticated user ID first
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        throw new Error('No authenticated user found');
-      }
-
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
         .select('*')
-        .eq('id', authUser?.id)
+        .eq('id', clerkUser?.id)
         .single();
 
       if (existingUser && !fetchError) {
@@ -242,35 +125,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return userProfile;
       }
 
-      // Also check by email as fallback
-      if (!existingUser && fetchError?.code === 'PGRST116') {
-        const { data: existingUserByEmail } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', email)
-          .single();
-
-        if (existingUserByEmail) {
-          const userProfile: User = {
-            id: existingUserByEmail.id,
-            email: existingUserByEmail.email,
-            name: existingUserByEmail.name || '',
-            phone: existingUserByEmail.phone || '',
-            pinCode: existingUserByEmail.pin_code || '',
-            loyaltyPoints: existingUserByEmail.loyalty_points,
-            totalPurchases: existingUserByEmail.total_purchases,
-            addresses: [],
-            isAdmin: existingUserByEmail.is_admin
-          };
-          return userProfile;
-        }
-      }
-
-      // Create new user with the authenticated user's ID
+      // Create new user with Clerk user's ID
       const { data: newUser, error } = await supabase
         .from('users')
         .insert({
-          id: authUser.id,
+          id: clerkUser?.id,
           email,
           name: userData?.name || email.split('@')[0],
           phone: userData?.phone || '',
@@ -329,7 +188,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Handle addresses separately if provided
     if (userData.addresses) {
-      // Update addresses in Supabase
       userData.addresses.forEach(async (address) => {
         if (address.id.startsWith('addr-')) {
           // New address, insert
@@ -361,7 +219,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return React.createElement(
     AuthContext.Provider,
-    { value: { user, signInWithEmail, signInWithPassword, signUp, signOut, createUserIfNotExists, updateUser, isLoading } },
+    { value: { user, signOut, createUserIfNotExists, updateUser, isLoading } },
     children
   );
 };

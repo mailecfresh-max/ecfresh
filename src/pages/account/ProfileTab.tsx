@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Save, LogOut } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { Save } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useClerk } from '@clerk/nextjs';
+import toast from 'react-hot-toast';
 
 const ProfileTab: React.FC = () => {
-  const { user, updateUser, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user, updateUser } = useAuth();
+  const { signOut } = useClerk();
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [pinCode, setPinCode] = useState('');
@@ -63,8 +63,7 @@ const ProfileTab: React.FC = () => {
   };
 
   const handleSignOut = () => {
-    logout();
-    navigate('/');
+    signOut();
   };
 
   return (
@@ -95,15 +94,14 @@ const ProfileTab: React.FC = () => {
           <input value={optionalPhone} onChange={(e) => setOptionalPhone(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="10-digit" />
         </div>
         <div>
-          <label className="block text-sm text-gray-700 mb-1">Email (optional)</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500" type="email" />
+          <label className="block text-sm text-gray-700 mb-1">Email (read-only)</label>
+          <input value={email} readOnly className="w-full px-3 py-2 border border-gray-200 rounded-xl bg-gray-50 text-gray-500" type="email" />
         </div>
         <div className="flex justify-between items-center">
           <button 
             onClick={handleSignOut}
             className="inline-flex items-center space-x-2 text-red-600 hover:text-red-700 px-4 py-2 border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
           >
-            <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
           </button>
           <button onClick={onSave} disabled={saving} className="inline-flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-medium">
@@ -117,5 +115,3 @@ const ProfileTab: React.FC = () => {
 };
 
 export default ProfileTab;
-
-

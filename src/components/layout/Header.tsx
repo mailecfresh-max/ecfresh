@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Search, ShoppingCart, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import { LOCAL_STORAGE_KEYS, getFromLocalStorage } from '../../utils/localStorage';
@@ -99,21 +100,31 @@ const Header: React.FC = () => {
 
               {/* User Menu - Desktop */}
               <div className="hidden md:flex items-center space-x-2">
-                {user ? (
-                  <Link
-                    to={user.isAdmin ? "/dashboard" : "/account"}
-                    className="text-sm font-medium text-gray-900 hover:text-green-600 transition-colors"
-                  >
-                    {user.isAdmin ? 'Dashboard' : (user.name || 'Account')}
-                  </Link>
-                ) : (
-                  <Link
-                    to="/login"
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Login
-                  </Link>
-                )}
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                      Login
+                    </button>
+                  </SignInButton>
+                </SignedOut>
+                <SignedIn>
+                  {user?.isAdmin ? (
+                    <Link
+                      to="/dashboard"
+                      className="text-sm font-medium text-gray-900 hover:text-green-600 transition-colors mr-2"
+                    >
+                      Dashboard
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/account"
+                      className="text-sm font-medium text-gray-900 hover:text-green-600 transition-colors mr-2"
+                    >
+                      Account
+                    </Link>
+                  )}
+                  <UserButton afterSignOutUrl="/" />
+                </SignedIn>
               </div>
             </div>
           </div>
@@ -147,24 +158,35 @@ const Header: React.FC = () => {
             >
               Shop
             </Link>
-            {user && (
-              <Link
-                to={user.isAdmin ? "/dashboard" : "/account"}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                {user.isAdmin ? 'Admin Dashboard' : 'My Account'}
-              </Link>
-            )}
-            {!user && (
-              <Link
-                to="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="block py-2 text-green-600 font-medium transition-colors"
-              >
-                Login
-              </Link>
-            )}
+            <SignedIn>
+              {user?.isAdmin ? (
+                <Link
+                  to="/dashboard"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block py-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Admin Dashboard
+                </Link>
+              ) : (
+                <Link
+                  to="/account"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block py-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  My Account
+                </Link>
+              )}
+            </SignedIn>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block py-2 text-green-600 font-medium transition-colors"
+                >
+                  Login
+                </button>
+              </SignInButton>
+            </SignedOut>
           </div>
         </motion.div>
       </header>
