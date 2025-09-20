@@ -21,13 +21,18 @@ import WishlistPage from './pages/WishlistPage';
 // Get the publishable key from environment variables
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-if (!clerkPubKey) {
+// Check if we have a valid Clerk key (not just a placeholder)
+const hasValidClerkKey = clerkPubKey && 
+  clerkPubKey !== 'pk_test_placeholder_key_replace_with_real_key' && 
+  clerkPubKey.startsWith('pk_');
+
+if (!hasValidClerkKey) {
   console.warn('Missing Clerk Publishable Key. Authentication features will be disabled.');
 }
 
 function App() {
-  // If no Clerk key is available, render without ClerkProvider
-  if (!clerkPubKey) {
+  // If no valid Clerk key is available, render without ClerkProvider
+  if (!hasValidClerkKey) {
     return (
       <AuthProvider>
         <AdminDataProvider>
