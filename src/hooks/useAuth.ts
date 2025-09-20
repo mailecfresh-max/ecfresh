@@ -1,5 +1,4 @@
 import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import { supabase } from '../lib/supabase';
 import { User } from '../types';
 import toast from 'react-hot-toast';
@@ -15,79 +14,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { user: clerkUser, isLoaded } = useUser();
-  const { signOut: clerkSignOut } = useClerkAuth();
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (isLoaded) {
-      if (clerkUser) {
-        fetchUserProfile(clerkUser);
-      } else {
-        setUser(null);
-        setIsLoading(false);
-      }
-    }
-  }, [clerkUser, isLoaded]);
-
-  const fetchUserProfile = async (clerkUser: any) => {
-    if (!supabase) return;
-
-    console.log('Fetching user profile for:', clerkUser.emailAddresses[0]?.emailAddress);
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          *,
-          addresses (*)
-        `)
-        .eq('id', clerkUser.id)
-        .single();
-
-      if (error) {
-        // If user profile doesn't exist, create it
-        if (error.code === 'PGRST116') {
-          console.log('User profile not found, creating new profile...');
-          const newUser = await createUserIfNotExists(
-            clerkUser.emailAddresses[0]?.emailAddress || '', 
-            {
-              name: clerkUser.fullName || clerkUser.firstName || '',
-              phone: clerkUser.phoneNumbers[0]?.phoneNumber || ''
-            }
-          );
-          setUser(newUser);
-          setIsLoading(false);
-          return;
-        }
-        throw error;
-      }
-
-      if (data) {
-        const userProfile: User = {
-          id: data.id,
-          email: data.email,
-          name: data.name || '',
-          phone: data.phone || '',
-          pinCode: data.pin_code || '',
-          loyaltyPoints: data.loyalty_points,
-          totalPurchases: data.total_purchases,
-          addresses: data.addresses || [],
-          isAdmin: data.is_admin
-        };
-        setUser(userProfile);
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      toast.error('Failed to load user profile');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [isLoading, setIsLoading] = useState(false);
 
   const signOut = async () => {
     try {
-      await clerkSignOut();
       setUser(null);
       toast.success('Signed out successfully');
     } catch (error) {
@@ -102,34 +33,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      // First check if user exists
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', clerkUser?.id)
-        .single();
-
-      if (existingUser && !fetchError) {
-        // User exists, return existing user data
-        const userProfile: User = {
-          id: existingUser.id,
-          email: existingUser.email,
-          name: existingUser.name || '',
-          phone: existingUser.phone || '',
-          pinCode: existingUser.pin_code || '',
-          loyaltyPoints: existingUser.loyalty_points,
-          totalPurchases: existingUser.total_purchases,
-          addresses: [],
-          isAdmin: existingUser.is_admin
-        };
-        return userProfile;
-      }
-
-      // Create new user with Clerk user's ID
+      // Create new user
+      const newUserId = `user-${Date.now()}`;
       const { data: newUser, error } = await supabase
         .from('users')
         .insert({
-          id: clerkUser?.id,
+          id: newUserId,
           email,
           name: userData?.name || email.split('@')[0],
           phone: userData?.phone || '',

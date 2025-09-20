@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Search, ShoppingCart, Menu, X } from 'lucide-react';
+import { MapPin, Search, ShoppingCart, Menu, X, User, LogIn } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { SignInButton, SignUpButton, UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
 import { useCart } from '../../hooks/useCart';
 import { useAuth } from '../../hooks/useAuth';
 import { LOCAL_STORAGE_KEYS, getFromLocalStorage } from '../../utils/localStorage';
@@ -14,7 +13,7 @@ const Header: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { getTotalItems } = useCart();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
   const totalItems = getTotalItems();
@@ -100,31 +99,39 @@ const Header: React.FC = () => {
 
               {/* User Menu - Desktop */}
               <div className="hidden md:flex items-center space-x-2">
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                      Login
-                    </button>
-                  </SignInButton>
-                </SignedOut>
-                <SignedIn>
-                  {user?.isAdmin ? (
-                    <Link
-                      to="/dashboard"
-                      className="text-sm font-medium text-gray-900 hover:text-green-600 transition-colors mr-2"
-                    >
-                      Dashboard
-                    </Link>
-                  ) : (
+                {user ? (
+                  <div className="flex items-center space-x-2">
+                    {user.isAdmin && (
+                      <Link
+                        to="/dashboard"
+                        className="text-sm font-medium text-gray-900 hover:text-green-600 transition-colors"
+                      >
+                        Dashboard
+                      </Link>
+                    )}
                     <Link
                       to="/account"
-                      className="text-sm font-medium text-gray-900 hover:text-green-600 transition-colors mr-2"
+                      className="flex items-center space-x-1 text-sm font-medium text-gray-900 hover:text-green-600 transition-colors"
                     >
-                      Account
+                      <User className="w-4 h-4" />
+                      <span>Account</span>
                     </Link>
-                  )}
-                  <UserButton afterSignOutUrl="/" />
-                </SignedIn>
+                    <button
+                      onClick={signOut}
+                      className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    to="/account"
+                    className="flex items-center space-x-1 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Login</span>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -158,16 +165,17 @@ const Header: React.FC = () => {
             >
               Shop
             </Link>
-            <SignedIn>
-              {user?.isAdmin ? (
-                <Link
-                  to="/dashboard"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block py-2 text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  Admin Dashboard
-                </Link>
-              ) : (
+            {user ? (
+              <>
+                {user.isAdmin && (
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block py-2 text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    Admin Dashboard
+                  </Link>
+                )}
                 <Link
                   to="/account"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -175,18 +183,25 @@ const Header: React.FC = () => {
                 >
                   My Account
                 </Link>
-              )}
-            </SignedIn>
-            <SignedOut>
-              <SignInButton mode="modal">
                 <button
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block py-2 text-green-600 font-medium transition-colors"
+                  onClick={() => {
+                    signOut();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="block py-2 text-gray-600 hover:text-gray-900 transition-colors"
                 >
-                  Login
+                  Sign Out
                 </button>
-              </SignInButton>
-            </SignedOut>
+              </>
+            ) : (
+              <Link
+                to="/account"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="block py-2 text-green-600 font-medium transition-colors"
+              >
+                Login
+              </Link>
+            )}
           </div>
         </motion.div>
       </header>

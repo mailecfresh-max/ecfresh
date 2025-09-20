@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { User, Package } from 'lucide-react';
-import { SignInButton } from '@clerk/nextjs';
+import { User, Package, LogIn } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Link } from 'react-router-dom';
 import ProfileTab from './ProfileTab';
@@ -18,15 +17,21 @@ const AccountLayout: React.FC = () => {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center max-w-md w-full">
+          <LogIn className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Welcome to your account</h2>
-          <p className="text-gray-600 mb-6">Please log in to view orders and profile settings.</p>
+          <p className="text-gray-600 mb-6">Please create an account or sign in to view orders and profile settings.</p>
           <div className="flex items-center justify-center gap-3">
-            <SignInButton mode="modal">
-              <button className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-medium">
-                Log in
-              </button>
-            </SignInButton>
-            <Link to="/shop" className="text-sm text-green-600 hover:underline">Continue shopping</Link>
+            <Link 
+              to="/shop" 
+              className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-medium transition-colors"
+            >
+              Continue Shopping
+            </Link>
+          </div>
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>Note:</strong> You can still place orders as a guest. An account will be created automatically when you checkout.
+            </p>
           </div>
         </div>
       </div>
